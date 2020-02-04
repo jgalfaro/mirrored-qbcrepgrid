@@ -1,30 +1,131 @@
 import sys
 import networkx as nx
 import matplotlib.pyplot as plt
+import numpy as np
+import math
 from scipy.stats import bernoulli
 from random import choice,randrange,randint
 from collections import Counter
 from statistics import mean
 
 ## Initial Parameters
-k = 32 #k quadratic (2D) lattice
+k = 8 #k quadratic (2D) lattice
 p = 0.65 #bernoulli probability for bond percolation
-q = 0.95 #bernoulli probability for terminal arrival
+q = 0.65 #bernoulli probability for terminal arrival
 RepeaterMark = "s" #display repaters as squares, i.e., 's'
 TerminalMark = "o" #display terminals as discs, i.e., 'o'
-
+##other marks are  s o ^ > v < d p h 8 (default mark is 'o')
 
 ## Processing Parameters
 DrawGrid=False
 ShowLabels=False
+AdditionalRing=True
 BondPercolation=True
 ComputePaths=True
-PathSearchAlgorithm=1 #1=shortestPaths 2=peelingPaths
-AdditionalRing=True
+PathSearchAlgorithm=2 #1=shortestPaths 2=peelingPaths
 CSVFormat=True
 
 #Types of nodes, either terminals or repeaters
 nodeShapes = [RepeaterMark,TerminalMark]
+
+
+def entanglementTime(d):
+    """
+    Returns time (s) between atom-photon entanglement generation and acks reception on a link.
+
+    Parameter
+    ---------
+    d : positive integer
+        Link length (km).
+    """
+    # propagation speed (km/s)
+    c = 2 * 10**5
+    # atomic BSM duration (s)
+    taua = 10*10**-6
+    # duty cycle duration for atom cooling (s)
+    taud = 100*10**-6
+    # herald detector duration (s)
+    tauh = 20*10**-6
+    # optical BSM duration (s)
+    tauo = 10*10**-6
+    # atom pulse duration (s)
+    taup = 5.9*10**-6
+    # telecom detector duration (s)
+    taut = 10*10**-6
+
+    # classical communication time (s)
+    T = d / (2 * c)
+    return taut + tauo + 2*T
+
+def Ts(d):
+    """
+    Returns the successful link entanglement time (s).
+
+    Parameter
+    ---------
+    d : positive integer
+        Link length (km).
+
+    """
+    # atomic BSM duration (s)
+    taua = 10*10**-6
+    # duty cycle duration for atom cooling (s)
+    taud = 100*10**-6
+    # herald detector duration (s)
+    tauh = 20*10**-6
+    # optical BSM duration (s)
+    tauo = 10*10**-6
+    # atom pulse duration (s)
+    taup = 5.9*10**-6
+    # telecom detector duration (s)
+    taut = 10*10**-6
+
+    return taup + max(tauh, entanglementTime(d))
+
+def Tu(d):
+    """Returns the unsuccessful link entanglement time (s)."""
+    # atomic BSM duration (s)
+    taua = 10*10**-6
+    # duty cycle duration for atom cooling (s)
+    taud = 100*10**-6
+    # herald detector duration (s)
+    tauh = 20*10**-6
+    # optical BSM duration (s)
+    tauo = 10*10**-6
+    # atom pulse duration (s)
+    taup = 5.9*10**-6
+    # telecom detector duration (s)
+    taut = 10*10**-6
+
+    return taup + max(max(tauh, entanglementTime(d)),taud)
+
+def linkEntanglementGenerationRate(d, Tch):
+    """Returns the entanglement generation rate across a single link
+    vs. link length (km).
+
+    Parameters
+    ----------
+    d : positive integer
+        Link length (km).
+    Tch : interger, greater than or equal to zero
+        Quantum memory coherence time (s), e.g., 100*10**-3.
+    """
+    # atom-photon entanglement generation probability
+    p = 0.53
+    # BSM efficiency
+    v = 0.39
+    # attenuation length (km)
+    L = 22
+    # propagation speed (km/s)
+    c = 2 * 10**5
+
+    # link entanglement probability
+    q = 0.5 * v * p**2 * math.exp(-d/L)
+    if Tch >= entanglementTime(d):
+        return( q / ( (1-q)*Tu(d) + q*Ts(d) ) )
+    else:
+        return 0
+
 
 
 #compute the intersection of two lists
@@ -42,6 +143,34 @@ def process_graph(G,k,p,q):
     :param q: bernoulli probability for terminal arrival
     :return: the processed copy of the original graph
     """
+
+
+    # propagation speed (km/s)
+    c = 2 * 10**5
+    # BSM efficiency
+    v = 0.39
+    # attenuation length (km)
+    L = 22
+    # atom-photon entanglement generation probability
+    p = 0.53
+    # atomic BSM duration (s)
+    taua = 10*10**-6
+    # duty cycle duration for atom cooling (s)
+    taud = 100*10**-6
+    # herald detector duration (s)
+    tauh = 20*10**-6
+    # optical BSM duration (s)
+    tauo = 10*10**-6
+    # atom pulse duration (s)
+    taup = 5.9*10**-6
+    # telecom detector duration (s)
+    taut = 10*10**-6
+
+    # link length (km) in in [1,200]
+    x = np.linspace(1,200,200)
+    y = np.zeros(len(x))
+
+
     H = G.copy()
 
     Edges=[]
@@ -177,6 +306,7 @@ def process_graph(G,k,p,q):
     elif ComputePaths and PathSearchAlgorithm==1:
         visitedRepeaters=[]
         pathLength=[]
+        entRate=[]
         for i in range(numTerminals):
             for j in range(i+1,numTerminals):
                 Found=False
@@ -190,6 +320,7 @@ def process_graph(G,k,p,q):
                             print "[shortest path between both terminals]"
                         visitedRepeaters.append(path)
                         pathLength.append(len(path))
+                        entRate.append(linkEntanglementGenerationRate(len(path), 100*10**-3 ))
                         Found=True
                     else:
                         #print " (2nd try)",
@@ -201,6 +332,7 @@ def process_graph(G,k,p,q):
                                     print "[found around",len(list(allPaths)),"other shortest paths]"
                                 visitedRepeaters.append(newpath)
                                 pathLength.append(len(newpath))
+                                entRate.append(linkEntanglementGenerationRate(len(newpath), 100*10**-3 ))
                                 Found=True
                                 break
                             if not Found:
@@ -213,6 +345,7 @@ def process_graph(G,k,p,q):
                                             print "[found around",len(list(allPaths)),"other paths]"
                                         visitedRepeaters.append(newpath)
                                         pathLength.append(len(newpath))
+                                        entRate.append(linkEntanglementGenerationRate(len(newpath), 100*10**-3 ))
                                         Found=True
                                         break
                                     if not Found:
@@ -224,6 +357,7 @@ def process_graph(G,k,p,q):
     elif ComputePaths and PathSearchAlgorithm==2:
         visitedRepeaters=[]
         pathLength=[]
+        entRate=[]
         REDO=True
         for i in range(numTerminals):
             for j in range(i+1,numTerminals):
@@ -234,13 +368,22 @@ def process_graph(G,k,p,q):
                 if ShowLabels:
                     print terminalNodes[i],"->",terminalNodes[j],":",
                 try:
+                    # allPaths=nx.all_simple_paths(H,terminalNodes[i],terminalNodes[j])
+                    # for newpath in allPaths:
+                    #         if not intersection(list(newpath[1:-1]),list(terminalNodes)):#discard paths containing terminals"
+                    #             path=newpath
+                    #             break
                     path=nx.shortest_path(H,terminalNodes[i],terminalNodes[j])
                     visitedRepeaters.append(path)
                     pathLength.append(len(path))
+                    entRate.append(linkEntanglementGenerationRate(len(path), 100*10**-3 ))
                     #remove edges in the path
                     path_edges = zip(path,path[1:])
                     path_edges = path_edges[1:-1]#omit first and last pairs
                     H.remove_edges_from(path_edges)
+                    # for edge in path_edges:
+                    #     #print "edge==",edge
+                    #     H.remove_edge(*edge)
                     if ShowLabels:
                         #print path
                         print "Path=",path,"Edges=",path_edges
@@ -265,14 +408,17 @@ def process_graph(G,k,p,q):
             print "repeater",congestion[2][0],"appears in",congestion[2][-1],"paths, etc.) "
             #print "path lenght is",pathLength
             print "Average length is",int(round(mean(pathLength),3))
+            print "Average entanglement rate is",int(round(mean(entRate),3))
             print ""
         elif not CSVFormat:
             print "Congestion = ",congestion[0][-1]
-            print "Average length = ",int(round(mean(pathLength),3))
+            print "Average length is ",int(round(mean(pathLength),3))
+            print "Average entanglement rate is ",int(round(mean(entRate),3))
             print ""
             print ""
         else:
-            print congestion[0][-1],"\t",int(round(mean(pathLength),3))
+            print congestion[0][-1],"\t",int(round(mean(pathLength),3)),"\t",int(round(mean(entRate),3))
+            #print linkEntanglementGenerationRate(int(round(mean(pathLength),3)), 100*10**-3 )
     ###### Search of Paths ######
 
 
@@ -283,6 +429,7 @@ def process_graph(G,k,p,q):
 
 G = nx.grid_2d_graph(k,k) #Create a networkx k^2 2D lattice
 
+#https://stackoverflow.com/questions/33395817/consistent-removal-of-nodes-from-grid-2d-graph
 #Instead of labelling nodes as (i,j), label them as 0,1,..k^2
 labels = dict( ((i, j), i + (k-1-j) * k ) for i, j in G.nodes() )
 #print "labels=",labels
