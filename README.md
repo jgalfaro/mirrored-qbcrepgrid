@@ -1,4 +1,4 @@
-# Capacity Requirements of Quantum Repeater
+# Capacity Requirements in Networks of Quantum Repeaters and Terminals
 
 ### Michel Barbeau, Carleton University, School of Computer Science, Canada.
 
