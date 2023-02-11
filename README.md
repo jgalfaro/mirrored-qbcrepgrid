@@ -1,20 +1,24 @@
 # Capacity Requirements in Networks of Quantum Repeaters and Terminals
+## (Repeated Purification versus Concatenated Error Correction Analysis)
 
 ### Michel Barbeau, Carleton University, School of Computer Science, Canada.
 
-### Joaquin Garcia-Alfaro, Institut Polytechnique de Paris, Telecom SudParis, France.
+### Joaquin Garcia-Alfaro, SAMOVAR, Institut Polytechnique de Paris, Telecom SudParis, France.
 
 ### Evangelos Kranakis, Carleton University, School of Computer Science, Canada.
 
 ## Abstract
 
-We consider the problem of path congestion avoidance in networks of quantum repeaters and terminals. In other words, the avoidance of situations when demands exceed capacity. We assume networks in which the sets of complete paths between terminals may affect the capacity of repeaters in the network. We compare the reduction of congestion avoidance of two representative path establishment algorithms: shortest-path establishment vs. layer-peeling path establishment. We observe that both strategies provide an equivalent entanglement rate, while the layer-peeling establishment algorithm considerably reduces the congestion in the network of repeaters. Repeaters in the inner layers get less congested and require a lower number of qubits, while providing a similar entanglement rate.
+We consider the problem of path congestion in networks of quantum repeaters and terminals. We assume networks in which the sets of complete paths between terminals may affect the capacity of repeaters in the network. We also address the problem of errors in entanglement  swapping and its mitigation using purification and error correction. We study their resource requirements, namely, their work memory complexity (e.g., number of stored qubits) and operational complexity (e.g., number of operations). We observe that concatenated error correction, versus repeated purification, requires fewer iterations and has lower operational complexity than repeated purification to reach high fidelity at the expense of increased memory requirements. 
 
 ## References
 
 If using this code for research purposes, please cite:
 
 [1] M. Barbeau, J. Garcia-Alfaro, E. Kranakis, "Capacity Requirements of Quantum Repeaters," IEEE International Conference on Quantum Computing and Engineering (QCE20), pp. 148-157, DOI: https://doi.org/10.1109/QCE49297.2020.00028, Denver, CO, USA, October 12-16, 2020. 
+
+[2] M. Barbeau, J. Garcia-Alfaro, E. Kranakis, "Repeated Purification versus Concatenated Error Correction in Fault Tolerant Quantum Networks", to appear in 2023.
+
 
 ```
 @inproceedings{QCE20BarbeauGarciaKranakis,
