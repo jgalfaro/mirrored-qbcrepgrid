@@ -1,5 +1,5 @@
 # Capacity Requirements in Networks of Quantum Repeaters and Terminals
-## (Repeated Purification versus Concatenated Error Correction Analysis)
+## - Repeated Purification versus Concatenated Error Correction Analysis -
 
 ### Michel Barbeau, Carleton University, School of Computer Science, Canada.
 
@@ -17,7 +17,7 @@ If using this code for research purposes, please cite:
 
 [1] M. Barbeau, J. Garcia-Alfaro, E. Kranakis, "Capacity Requirements of Quantum Repeaters," IEEE International Conference on Quantum Computing and Engineering (QCE20), pp. 148-157, DOI: https://doi.org/10.1109/QCE49297.2020.00028, Denver, CO, USA, October 12-16, 2020. 
 
-[2] M. Barbeau, J. Garcia-Alfaro, E. Kranakis, "Repeated Purification versus Concatenated Error Correction in Fault Tolerant Quantum Networks", to appear in 2023.
+[2] M. Barbeau, J. Garcia-Alfaro, E. Kranakis, "Repeated Purification versus Concatenated Error Correction in Fault Tolerant Quantum Networks", *to appear*.
 
 
 ```

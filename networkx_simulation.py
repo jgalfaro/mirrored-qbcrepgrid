@@ -9,9 +9,10 @@ from collections import Counter
 from statistics import mean
 
 ## Initial Parameters
-k = 8 #k quadratic (2D) lattice
-p = 0.65 #bernoulli probability for bond percolation
-q = 0.65 #bernoulli probability for terminal arrival
+k = 10 #k quadratic (2D) lattice
+p = 0.5 #bernoulli probability for bond percolation
+q = 0.6 #bernoulli probability for terminal arrival
+SparseProbability = 0.5 #NewProbability suggested by Evangelos
 RepeaterMark = "s" #display repaters as squares, i.e., 's'
 TerminalMark = "o" #display terminals as discs, i.e., 'o'
 ##other marks are  s o ^ > v < d p h 8 (default mark is 'o')
@@ -22,8 +23,8 @@ ShowLabels=False
 AdditionalRing=True
 BondPercolation=True
 ComputePaths=True
-PathSearchAlgorithm=2 #1=shortestPaths 2=peelingPaths
-CSVFormat=True
+PathSearchAlgorithm=1 #1=shortestPaths 2=peelingPaths
+CSVFormat=False
 
 #Types of nodes, either terminals or repeaters
 nodeShapes = [RepeaterMark,TerminalMark]
@@ -133,7 +134,7 @@ def intersection(A, B):
     C = [c for c in A if c in B]
     return C
 
-def process_graph(G,k,p,q):
+def process_graph(G,k,p,q,SparseProbability):
     """
     Given an initial grid_2d_graph, return a copy of the graph with
     bond percolation, peripheral edges as terminals, ...
@@ -141,6 +142,11 @@ def process_graph(G,k,p,q):
     :param k: k quadratic (2D) lattice
     :param p: bernoulli probability for bond percolation
     :param q: bernoulli probability for terminal arrival
+    :param SparseProbability: probability associated to a terminal i
+                              (at the top) to become active and
+	                      communicate to a single terminal (j
+                              at the bottom)
+
     :return: the processed copy of the original graph
     """
 
@@ -290,7 +296,7 @@ def process_graph(G,k,p,q):
     if ShowLabels:
         print "The graph contains",numRepeaters,"repeaters [",repeaterNodes,"] and",numTerminals,"terminals [",terminalNodes,"]."
         print ""
-        print "Paths:"
+        #print "Paths:"
     elif not CSVFormat:
         print "The graph contains",numRepeaters,"repeaters and",numTerminals,"terminals."
     else:
@@ -307,52 +313,96 @@ def process_graph(G,k,p,q):
         visitedRepeaters=[]
         pathLength=[]
         entRate=[]
-        for i in range(numTerminals):
-            for j in range(i+1,numTerminals):
-                Found=False
-                if ShowLabels:
-                    print terminalNodes[i],"->",terminalNodes[j],":",
-                try:
-                    path=nx.shortest_path(subH,terminalNodes[i],terminalNodes[j]) #This can fail
-                    if not intersection(list(path[1:-1]),list(terminalNodes)):#discard paths containing terminals
-                        if ShowLabels:
-                            print path,
-                            print "[shortest path between both terminals]"
-                        visitedRepeaters.append(path)
-                        pathLength.append(len(path))
-                        entRate.append(linkEntanglementGenerationRate(len(path), 100*10**-3 ))
-                        Found=True
-                    else:
-                        #print " (2nd try)",
-                        allPaths=nx.all_shortest_paths(subH,terminalNodes[i],terminalNodes[j]) ##This can still fail
-                        for newpath in allPaths:
-                            if not intersection(list(newpath[1:-1]),list(terminalNodes)):#discard paths containing terminals"
-                                if ShowLabels:
-                                    print path,
-                                    print "[found around",len(list(allPaths)),"other shortest paths]"
-                                visitedRepeaters.append(newpath)
-                                pathLength.append(len(newpath))
-                                entRate.append(linkEntanglementGenerationRate(len(newpath), 100*10**-3 ))
-                                Found=True
-                                break
-                            if not Found:
-                                #print " (3rd try needed)",
-                                allPaths=nx.all_simple_paths(subH,terminalNodes[i],terminalNodes[j])
-                                for newpath in allPaths:
-                                    if not intersection(list(newpath[1:-1]),list(terminalNodes)):#discard paths containing terminals"
-                                        if ShowLabels:
-                                            print path,
-                                            print "[found around",len(list(allPaths)),"other paths]"
-                                        visitedRepeaters.append(newpath)
-                                        pathLength.append(len(newpath))
-                                        entRate.append(linkEntanglementGenerationRate(len(newpath), 100*10**-3 ))
-                                        Found=True
-                                        break
-                                    if not Found:
-                                        print "I couldn't find any path from node",terminalNodes[i],"to node",terminalNodes[j],"!"
-                                        sys.exit()
-                except nx.NetworkXNoPath:
-                    print "No path between them!"
+
+        #for i in range(numTerminals):
+        #for j in range(i+1,numTerminals):
+
+        TopTerminalNodes =[]
+        BottomTerminalNodes =[]
+
+        #prepare top and bottom terminals
+        #print "TopTerminals",
+        for i in range(k-2):
+            #print "",terminalNodes[i],
+            TopTerminalNodes.append(terminalNodes[i])
+
+        #print "\nBottomTerminals",
+        for i in range(numTerminals-(k-2),numTerminals):
+            #print "",terminalNodes[i],
+            BottomTerminalNodes.append(terminalNodes[i])
+
+        #print "\n",
+        for i in range((k-2),(numTerminals-(k-2))):
+            if(k%2)!=0:
+                if (i % 2) != 0:
+                    #print "terminal ",terminalNodes[i],"to TopTerminals"
+                    TopTerminalNodes.append(terminalNodes[i])
+                else:
+                    #print "terminal ",terminalNodes[i],"to BottomTerminals"
+                    BottomTerminalNodes.append(terminalNodes[i])
+            else:
+                if (i % 2) == 0:
+                    #print "terminal ",terminalNodes[i],"to TopTerminals"
+                    TopTerminalNodes.append(terminalNodes[i])
+                else:
+                    #print "terminal ",terminalNodes[i],"to BottomTerminals"
+                    BottomTerminalNodes.append(terminalNodes[i])
+
+        print "\nTopTerminals=",TopTerminalNodes
+        print "BottomTerminals=",BottomTerminalNodes
+
+        print "\n"
+        for i in range(len(TopTerminalNodes)):
+            for j in range(len(BottomTerminalNodes)):
+                coinSparseSelection = bernoulli.rvs(SparseProbability, size=1)
+                if (not coinSparseSelection[0]):
+                    if ShowLabels:
+                        print TopTerminalNodes[i],"->",BottomTerminalNodes[j]," --> Top Terminal not enabled\n",
+                else:
+		            Found=False
+		            if ShowLabels:
+		                print TopTerminalNodes[i],"->",BottomTerminalNodes[j],":",
+		            try:
+		                path=nx.shortest_path(subH,TopTerminalNodes[i],BottomTerminalNodes[j]) #This can fail
+		                if not intersection(list(path[1:-1]),list(terminalNodes)):#discard paths containing terminals
+		                    if ShowLabels:
+		                        print path,""
+		                        #print "[shortest path between both terminals]"
+		                    visitedRepeaters.append(path)
+		                    pathLength.append(len(path))
+		                    entRate.append(linkEntanglementGenerationRate(len(path), 100*10**-3 ))
+		                    Found=True
+		                else:
+		                    #print " (2nd try)",
+		                    allPaths=nx.all_shortest_paths(subH,TopTerminalNodes[i],BottomTerminalNodes[j]) ##This can still fail
+		                    for newpath in allPaths:
+		                        if not intersection(list(newpath[1:-1]),list(terminalNodes)):#discard paths containing terminals"
+		                            if ShowLabels:
+		                                print path,
+		                                print "[found around",len(list(allPaths)),"other shortest paths]"
+		                            visitedRepeaters.append(newpath)
+		                            pathLength.append(len(newpath))
+		                            entRate.append(linkEntanglementGenerationRate(len(newpath), 100*10**-3 ))
+		                            Found=True
+		                            break
+		                        if not Found:
+		                            #print " (3rd try needed)",
+		                            allPaths=nx.all_simple_paths(subH,TopTerminalNodes[i],BottomTerminalNodes[j])
+		                            for newpath in allPaths:
+		                                if not intersection(list(newpath[1:-1]),list(terminalNodes)):#discard paths containing terminals"
+		                                    if ShowLabels:
+		                                        print path,
+		                                        print "[found around",len(list(allPaths)),"other paths]"
+		                                    visitedRepeaters.append(newpath)
+		                                    pathLength.append(len(newpath))
+		                                    entRate.append(linkEntanglementGenerationRate(len(newpath), 100*10**-3 ))
+		                                    Found=True
+		                                    break
+		                                if not Found:
+		                                    print "I couldn't find any path from node",TopTerminalNodes[i],"to node",BottomTerminalNodes[j],"!"
+		                                    sys.exit()
+		            except nx.NetworkXNoPath:
+		                print "No path between them!"
 
     elif ComputePaths and PathSearchAlgorithm==2:
         visitedRepeaters=[]
@@ -400,25 +450,35 @@ def process_graph(G,k,p,q):
             print ""
         for repeater in visitedRepeaters:
             summary+=repeater
-            #print summary
+            print summary
         congestion=Counter(summary).most_common(3) #show the (three) most congested repeaters
         if ShowLabels:
             print "Congestion = ",congestion[0][-1]," (Repeater",congestion[0][0],"appears in",congestion[0][-1],"paths,",
             print "repeater",congestion[1][0],"appears in",congestion[1][-1],"paths,",
-            print "repeater",congestion[2][0],"appears in",congestion[2][-1],"paths, etc.) "
-            #print "path lenght is",pathLength
+            print "repeater",congestion[2][0],"appears in",congestion[2][-1],"paths, ...) "
             print "Average length is",int(round(mean(pathLength),3))
-            print "Average entanglement rate is",int(round(mean(entRate),3))
+            print "Entanglement is",int(round(mean(entRate),3))
+            print ""
             print ""
         elif not CSVFormat:
+            Equations
             print "Congestion = ",congestion[0][-1]
-            print "Average length is ",int(round(mean(pathLength),3))
-            print "Average entanglement rate is ",int(round(mean(entRate),3))
+            print "Congestion = ",congestion[0][-1]," (Repeater",congestion[0][0],"traversed by",congestion[0][-1],"paths)"
+            print "repeater",congestion[1][0],"traversed by",congestion[1][-1],"paths,"
+            print "repeater",congestion[2][0],"appears in",congestion[2][-1],"paths, ...) "
+            print "Average path length is ",int(round(mean(pathLength),3))
+            print "Entanglement is ",int(round(mean(entRate),3))
             print ""
             print ""
+            CongestedRepeater=congestion[0][-1]
+            AvgPathLength=int(round(mean(pathLength),3))
+            print "Congestion = ",CongestedRepeater," (Repeater",congestion[0][0],"traversed by",CongestedRepeater,"paths)"
+            print "Average path length is ",AvgPathLength
         else:
-            print congestion[0][-1],"\t",int(round(mean(pathLength),3)),"\t",int(round(mean(entRate),3))
-            #print linkEntanglementGenerationRate(int(round(mean(pathLength),3)), 100*10**-3 )
+            print congestion[0][-1],"\t",int(round(mean(pathLength),3)),"\t",mean(entRate)
+            print "Average fidelity of 1 (O14)"
+            print ""
+            print ""
     ###### Search of Paths ######
 
 
@@ -436,7 +496,7 @@ labels = dict( ((i, j), i + (k-1-j) * k ) for i, j in G.nodes() )
 nx.relabel_nodes(G,labels,False)#relabel the node identifiers
 pos = {y:x for x,y in labels.iteritems()}#prepare the springbox for matplotlib
 
-subGraph=process_graph(G,k,p,q)
+subGraph=process_graph(G,k,p,q,SparseProbability)
 
 if DrawGrid:
 
