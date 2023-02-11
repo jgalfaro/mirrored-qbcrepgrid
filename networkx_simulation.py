@@ -12,7 +12,7 @@ from statistics import mean
 k = 10 #k quadratic (2D) lattice
 p = 0.5 #bernoulli probability for bond percolation
 q = 0.6 #bernoulli probability for terminal arrival
-SparseProbability = 0.5 #NewProbability suggested by Evangelos
+SparseProbability = 0.5 #probability factor to obtain sparse grids
 RepeaterMark = "s" #display repaters as squares, i.e., 's'
 TerminalMark = "o" #display terminals as discs, i.e., 'o'
 ##other marks are  s o ^ > v < d p h 8 (default mark is 'o')
